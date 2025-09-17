@@ -1,6 +1,8 @@
 import streamlit as st
 import pandas as pd
 import altair as alt
+import io
+import re
 
 def show_dashboard(df):
     """
@@ -56,13 +58,57 @@ def show_dashboard(df):
         
         st.altair_chart(line_chart, use_container_width=True)
             
-    except KeyError as ke:
-        st.error(f"대시보드를 생성하는 중 오류가 발생했습니다: '지표' 컬럼을 찾을 수 없습니다. 파일의 첫 번째 컬럼명이 '지표'인지 확인해주세요.")
-        st.dataframe(df)
-        
     except Exception as e:
         st.error(f"대시보드를 생성하는 중 오류가 발생했습니다: {e}")
         st.dataframe(df)
+
+def read_multi_table_csv(uploaded_file):
+    """
+    여러 테이블이 포함된 CSV 파일을 읽어 하나의 DataFrame으로 통합
+    """
+    try:
+        file_content = uploaded_file.getvalue().decode('cp949')
+    except UnicodeDecodeError:
+        uploaded_file.seek(0)
+        file_content = uploaded_file.getvalue().decode('utf-8')
+
+    # '지표'로 시작하는 행을 기준으로 파일을 여러 부분으로 분리
+    parts = re.split(r'\n지표,', file_content.strip())
+    
+    dfs = []
+    for i, part in enumerate(parts):
+        # 첫 번째 부분은 이미 '지표,'로 시작하므로 그대로 사용
+        if i > 0:
+            part = '지표,' + part
+        
+        try:
+            df = pd.read_csv(io.StringIO(part))
+            
+            # 컬럼 이름의 앞뒤 공백 제거
+            df.columns = df.columns.str.strip()
+            
+            # DataFrame 전치 (Transpose)
+            df_transposed = df.set_index('지표').T
+            df_transposed.index.name = '날짜'
+            df_transposed = df_transposed.reset_index()
+            
+            # '구분' 컬럼 추가 (100.00, 101.00 등으로 가정)
+            df_transposed['구분'] = f"{100 + i:.2f}"
+            
+            # 모든 컬럼을 숫자형으로 변환
+            for col in ['총 테스트 수', 'PASS', '가성불량', '진성불량', 'FAIL']:
+                df_transposed[col] = pd.to_numeric(df_transposed[col], errors='coerce')
+                
+            dfs.append(df_transposed)
+        except Exception as e:
+            st.warning(f"테이블 파싱 중 오류 발생: {e}. 해당 테이블은 건너뜁니다.")
+    
+    if not dfs:
+        st.error("파일에서 유효한 데이터를 찾을 수 없습니다. 파일 형식을 확인해주세요.")
+        return None
+        
+    return pd.concat(dfs, ignore_index=True)
+
 
 def main():
     st.set_page_config(
@@ -78,37 +124,20 @@ def main():
     uploaded_file = st.file_uploader("파일 업로드", type=["csv"])
     
     if uploaded_file is not None:
-        try:
-            # encoding='cp949' 및 skiprows=1 옵션 추가
-            df = pd.read_csv(uploaded_file, low_memory=False, encoding='cp949', skiprows=1)
-            
+        st.session_state['df'] = read_multi_table_csv(uploaded_file)
+        
+        if st.session_state['df'] is not None:
             st.write("### 업로드된 데이터 미리보기")
-            st.dataframe(df.head())
+            st.dataframe(st.session_state['df'].head())
             
             if st.button("분석 시작"):
                 st.session_state['show_dashboard'] = True
-            
-        except Exception as e:
-            st.error(f"파일을 처리하는 중 오류가 발생했습니다: {e}")
 
-        if 'show_dashboard' in st.session_state and 'df' in st.session_state:
-            show_dashboard(st.session_state['df'])
+            if 'show_dashboard' in st.session_state and st.session_state['show_dashboard']:
+                show_dashboard(st.session_state['df'])
 
 if __name__ == "__main__":
     if 'show_dashboard' not in st.session_state:
         st.session_state['show_dashboard'] = False
         st.session_state['df'] = None
-    
-    uploaded_file = st.file_uploader("파일 업로드", type=["csv"])
-    if uploaded_file is not None:
-        try:
-            st.session_state['df'] = pd.read_csv(uploaded_file, low_memory=False, encoding='cp949', skiprows=1)
-            st.write("### 업로드된 데이터 미리보기")
-            st.dataframe(st.session_state['df'].head())
-            if st.button("분석 시작"):
-                st.session_state['show_dashboard'] = True
-        except Exception as e:
-            st.error(f"파일을 처리하는 중 오류가 발생했습니다: {e}")
-
-    if st.session_state['show_dashboard'] and st.session_state['df'] is not None:
-        show_dashboard(st.session_state['df'])
+    main()
