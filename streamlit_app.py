@@ -80,23 +80,9 @@ def main():
     
     if uploaded_file is not None:
         try:
-            # 파일을 텍스트로 읽어 헤더 행을 찾고 DataFrame을 생성
-            file_content = uploaded_file.getvalue().decode('utf-8')
-            header_row_index = -1
+            # skiprows 옵션을 추가하여 데이터 시작 행을 지정
+            df = pd.read_csv(uploaded_file, low_memory=False, skiprows=1)
             
-            # '지표'가 포함된 행을 찾아 헤더로 지정
-            for i, line in enumerate(file_content.split('\n')):
-                if '지표' in line:
-                    header_row_index = i
-                    break
-            
-            if header_row_index == -1:
-                st.error("파일에 '지표' 컬럼이 포함된 헤더 행을 찾을 수 없습니다. 올바른 형식의 파일을 업로드해주세요.")
-                st.stop()
-                
-            uploaded_file.seek(0)
-            df = pd.read_csv(uploaded_file, low_memory=False, header=header_row_index)
-
             st.write("### 업로드된 데이터 미리보기")
             st.dataframe(df.head())
             
