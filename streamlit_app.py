@@ -7,7 +7,18 @@ def read_csv_robust(uploaded_file):
     """
     파일의 내용을 읽어 '지표' 컬럼이 있는 행을 찾아 헤더로 사용합니다.
     """
-    file_content = uploaded_file.getvalue().decode('utf-8')
+    try:
+        # cp949 인코딩으로 먼저 디코딩 시도
+        file_content = uploaded_file.getvalue().decode('cp949')
+    except UnicodeDecodeError:
+        # cp949 실패 시 utf-8로 다시 시도
+        uploaded_file.seek(0)
+        try:
+            file_content = uploaded_file.getvalue().decode('utf-8')
+        except UnicodeDecodeError:
+            st.error("파일 인코딩 오류가 발생했습니다. 파일이 CP949 또는 UTF-8로 인코딩되었는지 확인해주세요.")
+            return None
+    
     header_index = -1
     for i, line in enumerate(file_content.split('\n')):
         if '지표' in line:
@@ -55,7 +66,7 @@ def show_dashboard(df):
         delta_true = None
         if len(dates) > 1:
             prev_date = dates[dates.index(selected_date) - 1]
-            prev_data = df_transposed[df_transposed['날짜'] == prev_date].iloc[0]
+            prev_data = df_transposed[filtered_df['날짜'] == prev_date].iloc[0]
             delta_false = day_data['가성불량'] - prev_data['가성불량']
             delta_true = day_data['진성불량'] - prev_data['진성불량']
         
@@ -94,7 +105,6 @@ def main():
     uploaded_file = st.file_uploader("파일 업로드", type=["csv"])
     
     if uploaded_file is not None:
-        # read_csv_robust 함수를 사용해 파일을 읽음
         df = read_csv_robust(uploaded_file)
         
         if df is not None:
