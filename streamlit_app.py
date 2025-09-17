@@ -3,6 +3,25 @@ import pandas as pd
 import altair as alt
 import io
 
+def read_csv_robust(uploaded_file):
+    """
+    파일의 내용을 읽어 '지표' 컬럼이 있는 행을 찾아 헤더로 사용합니다.
+    """
+    file_content = uploaded_file.getvalue().decode('utf-8')
+    header_index = -1
+    for i, line in enumerate(file_content.split('\n')):
+        if '지표' in line:
+            header_index = i
+            break
+    
+    if header_index == -1:
+        st.error("파일에 '지표' 컬럼이 포함된 헤더 행을 찾을 수 없습니다.")
+        return None
+        
+    uploaded_file.seek(0) # 파일 포인터를 처음으로 되돌림
+    return pd.read_csv(uploaded_file, low_memory=False, encoding='cp949', header=header_index)
+
+
 def show_dashboard(df):
     """
     업로드된 데이터프레임을 기반으로 대시보드를 생성
@@ -57,10 +76,6 @@ def show_dashboard(df):
         
         st.altair_chart(line_chart, use_container_width=True)
             
-    except KeyError as ke:
-        st.error(f"대시보드를 생성하는 중 오류가 발생했습니다: '지표' 컬럼을 찾을 수 없습니다. 파일의 첫 번째 컬럼명이 '지표'인지 확인해주세요.")
-        st.dataframe(df)
-        
     except Exception as e:
         st.error(f"대시보드를 생성하는 중 오류가 발생했습니다: {e}")
         st.dataframe(df)
@@ -79,37 +94,22 @@ def main():
     uploaded_file = st.file_uploader("파일 업로드", type=["csv"])
     
     if uploaded_file is not None:
-        try:
-            # encoding='cp949' 및 skiprows=1 옵션 추가
-            df = pd.read_csv(uploaded_file, low_memory=False, encoding='cp949', skiprows=1)
-            
+        # read_csv_robust 함수를 사용해 파일을 읽음
+        df = read_csv_robust(uploaded_file)
+        
+        if df is not None:
             st.write("### 업로드된 데이터 미리보기")
             st.dataframe(df.head())
             
             if st.button("분석 시작"):
                 st.session_state['show_dashboard'] = True
-            
-        except Exception as e:
-            st.error(f"파일을 처리하는 중 오류가 발생했습니다: {e}")
+                st.session_state['df'] = df
 
-        if 'show_dashboard' in st.session_state and 'df' in st.session_state:
-            show_dashboard(st.session_state['df'])
+            if 'show_dashboard' in st.session_state and st.session_state['show_dashboard'] and 'df' in st.session_state:
+                show_dashboard(st.session_state['df'])
 
 if __name__ == "__main__":
     if 'show_dashboard' not in st.session_state:
         st.session_state['show_dashboard'] = False
         st.session_state['df'] = None
-    
-    uploaded_file = st.file_uploader("파일 업로드", type=["csv"])
-    if uploaded_file is not None:
-        try:
-            st.session_state['df'] = pd.read_csv(uploaded_file, low_memory=False, encoding='cp949', skiprows=1)
-            st.write("### 업로드된 데이터 미리보기")
-            st.dataframe(st.session_state['df'].head())
-            if st.button("분석 시작"):
-                st.session_state['show_dashboard'] = True
-        except Exception as e:
-            st.error(f"파일을 처리하는 중 오류가 발생했습니다: {e}")
-
-    if st.session_state['show_dashboard'] and st.session_state['df'] is not None:
-        show_dashboard(st.session_state['df'])
+    main()
