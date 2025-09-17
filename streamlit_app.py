@@ -7,7 +7,8 @@ def show_dashboard(df):
     업로드된 데이터프레임을 기반으로 대시보드를 생성
     """
     try:
-        # '지표' 컬럼이 존재하고 첫 번째 컬럼인지 확인
+        # 데이터프레임 전치 및 정리
+        # '지표' 컬럼이 존재하면 인덱스로 설정
         if '지표' in df.columns:
             df_transposed = df.set_index('지표').T
             df_transposed.index.name = '날짜'
@@ -80,7 +81,8 @@ def main():
     
     if uploaded_file is not None:
         try:
-            df = pd.read_csv(uploaded_file, low_memory=False)
+            # header=1을 추가하여 두 번째 행을 헤더로 사용하도록 수정
+            df = pd.read_csv(uploaded_file, low_memory=False, header=1)
             
             st.write("### 업로드된 데이터 미리보기")
             st.dataframe(df.head())
