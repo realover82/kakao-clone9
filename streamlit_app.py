@@ -67,8 +67,10 @@ def read_multi_table_csv(uploaded_file):
     여러 테이블이 포함된 CSV 파일을 읽어 하나의 DataFrame으로 통합
     """
     try:
+        # 파일 내용을 cp949 인코딩으로 읽기 시도
         file_content = uploaded_file.getvalue().decode('cp949')
     except UnicodeDecodeError:
+        # cp949 실패 시 utf-8로 다시 시도
         uploaded_file.seek(0)
         file_content = uploaded_file.getvalue().decode('utf-8')
 
