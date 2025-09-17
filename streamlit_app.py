@@ -6,7 +6,7 @@ def main():
     # 지금이 2021년 2월이라고 가정하고, 2021년 1월의 데이터를 12월 데이터와 비교하는 대시보드를 만듭어 봅시다.
 
     # 데이터 로드
-    df = pd.read_csv('data/ga4_sample.csv') # 20년 11월 ~ 21년 1월 google merchandise store 판매 데이터 (GA4)
+    df = pd.read_csv('ga4_sample.csv') # 20년 11월 ~ 21년 1월 google merchandise store 판매 데이터 (GA4)
    
     # 데이터 전처리 함수 정의
     def data_prep(data):
