@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 import altair as alt
+import io
 
 def show_dashboard(df):
     """
@@ -79,8 +80,8 @@ def main():
     
     if uploaded_file is not None:
         try:
-            # encoding='cp949' 옵션 추가
-            df = pd.read_csv(uploaded_file, low_memory=False, encoding='cp949')
+            # skiprows 옵션을 추가하여 데이터 시작 행을 지정
+            df = pd.read_csv(uploaded_file, low_memory=False, skiprows=1)
             
             st.write("### 업로드된 데이터 미리보기")
             st.dataframe(df.head())
@@ -102,7 +103,7 @@ if __name__ == "__main__":
     uploaded_file = st.file_uploader("파일 업로드", type=["csv"])
     if uploaded_file is not None:
         try:
-            st.session_state['df'] = pd.read_csv(uploaded_file, low_memory=False, encoding='cp949')
+            st.session_state['df'] = pd.read_csv(uploaded_file, low_memory=False, skiprows=1)
             st.write("### 업로드된 데이터 미리보기")
             st.dataframe(st.session_state['df'].head())
             if st.button("분석 시작"):
