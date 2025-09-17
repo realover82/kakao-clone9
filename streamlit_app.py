@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 import altair as alt
+import io
 
 def show_dashboard(df):
     """
@@ -8,7 +9,6 @@ def show_dashboard(df):
     """
     try:
         # 데이터프레임 전치 및 정리
-        # '지표' 컬럼이 존재하므로 바로 인덱스로 설정
         df_transposed = df.set_index('지표').T
         df_transposed.index.name = '날짜'
         df_transposed = df_transposed.reset_index()
@@ -57,6 +57,10 @@ def show_dashboard(df):
         
         st.altair_chart(line_chart, use_container_width=True)
             
+    except KeyError as ke:
+        st.error(f"대시보드를 생성하는 중 오류가 발생했습니다: '지표' 컬럼을 찾을 수 없습니다. 파일의 첫 번째 컬럼명이 '지표'인지 확인해주세요.")
+        st.dataframe(df)
+        
     except Exception as e:
         st.error(f"대시보드를 생성하는 중 오류가 발생했습니다: {e}")
         st.dataframe(df)
@@ -76,8 +80,23 @@ def main():
     
     if uploaded_file is not None:
         try:
-            df = pd.read_csv(uploaded_file, low_memory=False)
+            # 파일을 텍스트로 읽어 헤더 행을 찾고 DataFrame을 생성
+            file_content = uploaded_file.getvalue().decode('utf-8')
+            header_row_index = -1
             
+            # '지표'가 포함된 행을 찾아 헤더로 지정
+            for i, line in enumerate(file_content.split('\n')):
+                if '지표' in line:
+                    header_row_index = i
+                    break
+            
+            if header_row_index == -1:
+                st.error("파일에 '지표' 컬럼이 포함된 헤더 행을 찾을 수 없습니다. 올바른 형식의 파일을 업로드해주세요.")
+                st.stop()
+                
+            uploaded_file.seek(0)
+            df = pd.read_csv(uploaded_file, low_memory=False, header=header_row_index)
+
             st.write("### 업로드된 데이터 미리보기")
             st.dataframe(df.head())
             
