@@ -5,7 +5,7 @@ import os
 
 # 데이터베이스 경로 설정
 DB_FOLDER = "db"
-DB_FILE = os.path.join(DB_FOLDER, "SJ_TM2360E.sqlite3")
+DB_FILE = os.path.join(DB_FOLDER, "SJ_TM2360E_v2.sqlite3")
 
 # 데이터베이스 폴더가 없으면 생성
 if not os.path.exists(DB_FOLDER):
