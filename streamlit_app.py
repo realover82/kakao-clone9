@@ -48,7 +48,7 @@ if uploaded_file is not None:
         st.dataframe(df.head())
 
         # 테이블명 입력
-        table_name = st.text_input("데이터를 저장할 테이블명을 입력하세요.", value="historyinspection")
+        table_name = st.text_input("데이터를 저장할 테이블명을 입력하세요.", value="my_csv_data")
 
         if st.button("데이터베이스에 저장"):
             if table_name:
